@@ -1,0 +1,19 @@
+#JSGF V1.0;
+
+/**
+ * JSGF Grammar for VoiceCommand program
+ */
+
+grammar hello;
+
+public <greet> = ( Program | Browser | Device Manager | Control | Player | Task Manager | Pause);
+
+public <command> = ( Open | Close ) ( command | calculator | word | access | pad | paint | task manager | Browser );
+
+public <games> = (start | stop ) ( Step Mania | League of Legends | Guild Wars 2 | Battle Field 4 | Hearth Stone);
+
+public <action> = ( start | stop ) ( excel | photo shop | fire wall | recognize );
+
+public <net> = (site) ( face book | go girl | mail | hot mail | v g );
+
+public <random> = (blue | red | green | male );
