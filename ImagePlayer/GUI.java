@@ -1,4 +1,5 @@
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GraphicsConfiguration;
@@ -6,6 +7,7 @@ import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -27,6 +29,8 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import javax.swing.AbstractButton;
 import javax.swing.ImageIcon;
@@ -40,6 +44,8 @@ import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.UIManager;
+import javax.swing.UnsupportedLookAndFeelException;
 
 public class GUI extends JFrame implements ActionListener, ItemListener{
 	
@@ -54,15 +60,21 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 	private JMenuItem urlFile;
 	private JMenuItem play;
 	private JCheckBoxMenuItem shufflePlaylist;
+	private JCheckBoxMenuItem autoPlay;
 	private JMenuItem savePlaylist;
 	private JMenuItem loadPlaylist;
 	private ArrayList<String> icons = new ArrayList<String>();
 	private ArrayList<URL> URLicons = new ArrayList<URL>();
 	private ArrayList<ImageIcon> playlist = new ArrayList<ImageIcon>();
 	private int playlistCount = 0;
+	public Timer t;
+	public int changeInterval = 0;
+	public Toolkit toolkit;
+	public boolean firstInterval = true;
 	private JFrame main;
 	private JScrollPane scrollPane = new JScrollPane(pPanel);
 	private Boolean shuffle = false;
+	public Boolean isAutoplay = false;
 	private int userWidth;
 	private int userHeight;
 	GraphicsEnvironment ge;
@@ -111,96 +123,97 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		label = new JLabel(playlist.get(playlistCount));
 		label.setPreferredSize(new Dimension(userWidth,userHeight));
 		playPanel.add(label, BorderLayout.CENTER);
-		
+		if(isAutoplay){	
+			addTimer();
+		}
+			
 		cWf.addKeyListener(new KeyListener(){
 			@Override
 			public void keyPressed(KeyEvent arg0) {
 				// TODO Auto-generated method stub
 				
 				int key = arg0.getKeyCode();
-				System.out.print(key);
 				
 				if(key == KeyEvent.VK_LEFT){
-					playlistCount--;
-					playPanel.removeAll();
-					if(!(playlistCount < 0)){
-						JLabel l = new JLabel(playlist.get(playlistCount));
-						l.setPreferredSize(new Dimension(userWidth,userHeight));
-						playPanel.add(l, BorderLayout.CENTER);
+					if(isAutoplay){
+						t.cancel();
+						previousImage();
+						addTimer();
 					}else{
-						playlistCount = playlist.size()-1;
-						JLabel l = new JLabel(playlist.get(playlistCount));
-						l.setPreferredSize(new Dimension(userWidth,userHeight));
-						playPanel.add(l, BorderLayout.CENTER);
+						previousImage();
 					}
-					playPanel.invalidate();
-					playPanel.validate();
-					playPanel.repaint();
+					
 				}
 				if(key == KeyEvent.VK_RIGHT){
-					playlistCount++;
-					playPanel.removeAll();
-					if(!(playlistCount == playlist.size())){
-						//Icon icon = new ImageIcon(icons.get(playlistCount));
-						JLabel l = new JLabel(playlist.get(playlistCount));
-						l.setPreferredSize(new Dimension(userWidth,userHeight));
-						playPanel.add(l, BorderLayout.CENTER);
+					if(isAutoplay){
+						t.cancel();
+						previousImage();
+						addTimer();
 					}else{
-						playlistCount = 0;
-						if(shuffle){
-							shufflePlaylist();
-						}
-						JLabel l = new JLabel(playlist.get(playlistCount));
-						l.setPreferredSize(new Dimension(userWidth,userHeight));
-						playPanel.add(l, BorderLayout.CENTER);
+						nextImage();
 					}
-					playPanel.invalidate();
-					playPanel.validate();
-					playPanel.repaint();
 				}
 				if(key == arg0.VK_1){
-					screen = gs[0];
-					GraphicsConfiguration[] gc = screen.getConfigurations();
-					System.out.println(gc[0].getBounds());
-					cWf.setLocation(gc[0].getBounds().x,gc[0].getBounds().y);
-					cWf.setExtendedState(JFrame.MAXIMIZED_BOTH);
-					//f.setVisible(true);
+					changeScreen(gs[0]);
 				}else if(key == arg0.VK_2){
-					screen = gs[2];
-					GraphicsConfiguration[] gc = screen.getConfigurations();
-					System.out.println(gc[0].getBounds());
-					cWf.setLocation(gc[0].getBounds().x,gc[0].getBounds().y);
-					cWf.setExtendedState(JFrame.MAXIMIZED_BOTH);
+					if(!(gs.length < 2)){
+						changeScreen(gs[1]);
+					}else{
+						System.out.println("Screen 2 doesn't exist!");
+					}
 				}else if(key == arg0.VK_3){
-					screen = gs[1];
-					GraphicsConfiguration[] gc = screen.getConfigurations();
-					System.out.println(gc[0].getBounds());
-					cWf.setLocation(gc[0].getBounds().x,gc[0].getBounds().y);
-					cWf.setExtendedState(JFrame.MAXIMIZED_BOTH);
+					if(!(gs.length < 3)){
+						changeScreen(gs[2]);
+					}else{
+						System.out.println("Screen 3 doesn't exist!");
+					}
+				}else if(key == arg0.VK_4){
+					if(!(gs.length < 4)){
+						changeScreen(gs[3]);
+					}else{
+						System.out.println("Screen 4 doesn't exist!");
+					}
+				}else if(key == arg0.VK_5){
+					if(!(gs.length < 5)){
+						changeScreen(gs[4]);
+					}else{
+						System.out.println("Screen 5 doesn't exist!");
+					}
+				}else if(key == arg0.VK_6){
+					if(!(gs.length < 6)){
+						changeScreen(gs[5]);
+					}else{
+						System.out.println("Screen 6 doesn't exist!");
+					}
+				}else if(key == arg0.VK_7){
+					if(!(gs.length < 7)){
+						changeScreen(gs[6]);
+					}else{
+						System.out.println("Screen 7 doesn't exist!");
+					}
+				}else if(key == arg0.VK_8){
+					if(!(gs.length < 8)){
+						changeScreen(gs[7]);
+					}else{
+						System.out.println("Screen 8 doesn't exist!");
+					}
+				}else if(key == arg0.VK_9){
+					if(!(gs.length < 9)){
+						changeScreen(gs[8]);
+					}else{
+						System.out.println("Screen 9 doesn't exist!");
+					}
 				}else if(key == arg0.VK_ESCAPE){
 					cWf.dispose();
 					startWindow();
-					for(int i = 0;i < icons.size(); i++){
-						ImageIcon icon = new ImageIcon(icons.get(i));
-						JLabel label = new JLabel(icon);
-						pPanel.add(label);
-						playlist.add(icon);
+					if(shuffle){
+						shufflePlaylist.setSelected(true);
 					}
-					for(int i = 0; i < URLicons.size(); i++){
-						ImageIcon icon = new ImageIcon(URLicons.get(i));
-						JLabel label = new JLabel(icon);
-						pPanel.add(label);
-						playlist.add(icon);
+					if(isAutoplay){
+						t.cancel();
+						autoPlay.setSelected(true);
 					}
-					for(int i = 0; i < playlist.size(); i++){
-						System.out.println(playlist.get(i)+"\n");
-					}
-					pPanel.invalidate();
-					main.invalidate();
-					pPanel.validate();
-					main.validate();
-					pPanel.repaint();
-					main.repaint();
+					previewImages();
 				}
 			}
 
@@ -218,24 +231,13 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		cWf.addMouseListener(new MouseListener(){
 			@Override
 			public void mouseClicked(MouseEvent e){
-				playlistCount++;
-				playPanel.removeAll();
-				if(!(playlistCount == playlist.size())){
-					JLabel l = new JLabel(playlist.get(playlistCount));
-					l.setPreferredSize(new Dimension(userWidth,userHeight));
-					playPanel.add(l, BorderLayout.CENTER);
+				if(isAutoplay){
+					t.cancel();
+					previousImage();
+					addTimer();
 				}else{
-					playlistCount = 0;
-					if(shuffle){
-						shufflePlaylist();
-					}
-					JLabel l = new JLabel(playlist.get(playlistCount));
-					l.setPreferredSize(new Dimension(userWidth,userHeight));
-					playPanel.add(l, BorderLayout.CENTER);
+					nextImage();
 				}
-				playPanel.invalidate();
-				playPanel.validate();
-				playPanel.repaint();
 			}
 
 			@Override
@@ -268,8 +270,9 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 	
 	public void startWindow(){
 		main = new JFrame();
-		main.setSize(1980,720);
+		main.setSize(500,500);
 		main.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+		main.setLocationRelativeTo(null);
 		JMenu menu = new JMenu("File");
 		JMenu playback = new JMenu("Playback");
 		JMenuBar menubar = new JMenuBar();
@@ -277,6 +280,7 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		urlFile = new JMenuItem("Add from URL");
 		play = new JMenuItem("Play all");
 		shufflePlaylist = new JCheckBoxMenuItem("Shuffle");
+		autoPlay = new JCheckBoxMenuItem("Autoplay");
 		savePlaylist = new JMenuItem("Save playlist");
 		loadPlaylist = new JMenuItem("Load playlist");
 		main.setJMenuBar(menubar);
@@ -286,6 +290,7 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		menu.add(urlFile);
 		playback.add(play);
 		playback.add(shufflePlaylist);
+		playback.add(autoPlay);
 		playback.add(savePlaylist);
 		playback.add(loadPlaylist);
 		
@@ -294,6 +299,7 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		urlFile.addActionListener(this);
 		play.addActionListener(this);
 		shufflePlaylist.addItemListener(this);
+		autoPlay.addItemListener(this);
 		savePlaylist.addActionListener(this);
 		loadPlaylist.addActionListener(this);
 		
@@ -303,6 +309,7 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		
 		pPanel = new JPanel();
 		pPanel.setLayout(new GridBagLayout());
+		pPanel.setBackground(Color.WHITE);
 		c = new GridBagConstraints();
 		scrollPane = new JScrollPane(pPanel);
 	    
@@ -342,6 +349,9 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		}else if(arg0.getSource().equals(play)){
 			if(playlist.size() != 0){
 				main.dispose();
+				if(isAutoplay){
+					changeInterval = Integer.parseInt(JOptionPane.showInputDialog("Insert a change interval in seconds:"));
+				}
 				createWindow();
 			}else{
 				System.out.println("You havn't loaded any images!");
@@ -373,6 +383,18 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 				  System.out.println("No Selection ");
 				}
 		}
+		previewImages();
+	}
+	
+	public void changeScreen(GraphicsDevice graphicsDevice){
+		screen = graphicsDevice;
+		GraphicsConfiguration[] gc = screen.getConfigurations();
+		System.out.println(gc[0].getBounds());
+		cWf.setLocation(gc[0].getBounds().x,gc[0].getBounds().y);
+		cWf.setExtendedState(JFrame.MAXIMIZED_BOTH);
+	}
+	
+	public void previewImages(){
 		playlist.clear();
 		pPanel.removeAll();
 		
@@ -409,6 +431,7 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		pPanel.repaint();
 		main.repaint();
 	}
+	
 	public void savePlaylist(ArrayList<String> icons, ArrayList<URL> URLicons) throws FileNotFoundException{
 		
 		JFileChooser saveFile = new JFileChooser();
@@ -465,12 +488,80 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 	public void itemStateChanged(ItemEvent arg0) {
 		// TODO Auto-generated method stub
 		AbstractButton button = (AbstractButton) arg0.getItem();
-	    if(button.isSelected()){
-	      shuffle = true;
-	      System.out.println("Shuffle is now TRUE");
-	    }else{
-	      shuffle = false;
-	      System.out.println("Shuffle is now FALSE");
-	    }
+	    if (button.getText().equals(shufflePlaylist.getText())) {
+			if (button.isSelected()) {
+				shuffle = true;
+				System.out.println("Shuffle is now TRUE");
+			} else {
+				shuffle = false;
+				System.out.println("Shuffle is now FALSE");
+			}
+		}else if(button.getText().equals(autoPlay.getText())){
+			if(button.isSelected()){
+				isAutoplay = true;
+				System.out.println("Autoplay is now TRUE");
+			}else{
+				isAutoplay = false;
+				System.out.println("Autoplay is now FALSE");
+			}
+		}
+	}
+	
+	public void previousImage(){
+		playlistCount--;
+		playPanel.removeAll();
+		if(!(playlistCount < 0)){
+			JLabel l = new JLabel(playlist.get(playlistCount));
+			l.setPreferredSize(new Dimension(userWidth,userHeight));
+			playPanel.add(l, BorderLayout.CENTER);
+		}else{
+			playlistCount = playlist.size()-1;
+			JLabel l = new JLabel(playlist.get(playlistCount));
+			l.setPreferredSize(new Dimension(userWidth,userHeight));
+			playPanel.add(l, BorderLayout.CENTER);
+		}
+		playPanel.invalidate();
+		playPanel.validate();
+		playPanel.repaint();
+	}
+	
+	public void nextImage(){
+		playlistCount++;
+		playPanel.removeAll();
+		if(!(playlistCount == (playlist.size()))){
+			JLabel l = new JLabel(playlist.get(playlistCount));
+			l.setPreferredSize(new Dimension(userWidth,userHeight));
+			playPanel.add(l, BorderLayout.CENTER);
+		}else{
+			playlistCount = 0;
+			if(shuffle){
+				shufflePlaylist();
+			}
+			JLabel l = new JLabel(playlist.get(playlistCount));
+			l.setPreferredSize(new Dimension(userWidth,userHeight));
+			playPanel.add(l, BorderLayout.CENTER);
+		}
+		playPanel.invalidate();
+		playPanel.validate();
+		playPanel.repaint();
+	}
+	
+	public void addTimer(){
+		toolkit = Toolkit.getDefaultToolkit();
+		t = new Timer();
+		t.scheduleAtFixedRate(new IntervalChanger(), 0, changeInterval * 1000);
+	}
+	
+	class IntervalChanger extends TimerTask{
+
+		public void run() {
+			// TODO Auto-generated method stub
+			
+			if(!firstInterval){
+				nextImage();
+			}else{
+				firstInterval = false;
+			}
+		}
 	}
 }
