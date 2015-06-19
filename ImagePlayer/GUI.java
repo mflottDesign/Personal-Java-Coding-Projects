@@ -7,7 +7,16 @@ import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
+import java.awt.Image;
 import java.awt.Toolkit;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.dnd.DropTargetEvent;
+import java.awt.dnd.DropTargetListener;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
@@ -16,6 +25,7 @@ import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,33 +39,37 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.imageio.ImageIO;
 import javax.swing.AbstractButton;
 import javax.swing.ImageIcon;
+import javax.swing.JButton;
 import javax.swing.JCheckBoxMenuItem;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JLayeredPane;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
-import javax.swing.UIManager;
-import javax.swing.UnsupportedLookAndFeelException;
 
-public class GUI extends JFrame implements ActionListener, ItemListener{
+public class GUI extends JFrame implements ActionListener, ItemListener, MouseListener{
 	
 	public JFrame cWf;
 	public JPanel playPanel;
-	private JLabel label;
-	private FlowLayout f;
-	private GridBagConstraints c;
-	private GridBagConstraints c2;
+	private JLabel picLabel;
+	private GridBagConstraints previewConstraints;
+	private GridBagConstraints pPanelConstraints;
 	private JPanel pPanel;
+	private JLayeredPane picContainer;
+	private JPanel picPanel;
 	private JMenuItem file;
 	private JMenuItem urlFile;
 	private JMenuItem play;
@@ -77,9 +91,9 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 	public Boolean isAutoplay = false;
 	private int userWidth;
 	private int userHeight;
-	GraphicsEnvironment ge;
-	GraphicsDevice[] gs;
-	GraphicsDevice screen;
+	private GraphicsEnvironment ge;
+	private GraphicsDevice[] gs;
+	private GraphicsDevice screen;
 	
 	public GUI() throws IOException{
 		startWindow();
@@ -120,9 +134,9 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		}
 		
 		//First from playlist
-		label = new JLabel(playlist.get(playlistCount));
-		label.setPreferredSize(new Dimension(userWidth,userHeight));
-		playPanel.add(label, BorderLayout.CENTER);
+		picLabel = new JLabel(playlist.get(playlistCount));
+		picLabel.setPreferredSize(new Dimension(userWidth,userHeight));
+		playPanel.add(picLabel, BorderLayout.CENTER);
 		if(isAutoplay){	
 			addTimer();
 		}
@@ -228,38 +242,7 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 			}
 		});
 		
-		cWf.addMouseListener(new MouseListener(){
-			@Override
-			public void mouseClicked(MouseEvent e){
-				if(isAutoplay){
-					t.cancel();
-					previousImage();
-					addTimer();
-				}else{
-					nextImage();
-				}
-			}
-
-			@Override
-			public void mouseEntered(MouseEvent arg0) {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void mouseExited(MouseEvent arg0) {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void mousePressed(MouseEvent arg0) {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void mouseReleased(MouseEvent arg0) {
-				// TODO Auto-generated method stub	
-			}
-		});
+		cWf.addMouseListener(this);
 		cWf.setVisible(true);
 	}
 	
@@ -305,21 +288,28 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		
 		GridBagLayout g = new GridBagLayout();
 		main.setLayout(g);
-		c2 = new GridBagConstraints();
+		pPanelConstraints = new GridBagConstraints();
 		
 		pPanel = new JPanel();
 		pPanel.setLayout(new GridBagLayout());
-		pPanel.setBackground(Color.WHITE);
-		c = new GridBagConstraints();
+		main.setBackground(new Color(25,25,25));
+		pPanel.setBackground(new Color(25,25,25));
+		previewConstraints = new GridBagConstraints();
 		scrollPane = new JScrollPane(pPanel);
+		
+		// Creates the drag&drop listener
+	    MyDragDropListener myDragDropListener = new MyDragDropListener();
+
+	    //Connects pPanel with a drag and drop listener
+	    new DropTarget(pPanel, myDragDropListener);
 	    
-	    c2.gridx = 0;
-	    c2.gridy = 1;
-	    c2.weightx = 1;
-	    c2.weighty = 1;
-	    c2.fill = GridBagConstraints.BOTH;
-	    c2.anchor = GridBagConstraints.WEST;
-	    main.getContentPane().add(scrollPane, c2);
+	    pPanelConstraints.gridx = 0;
+	    pPanelConstraints.gridy = 1;
+	    pPanelConstraints.weightx = 1;
+	    pPanelConstraints.weighty = 1;
+	    pPanelConstraints.fill = GridBagConstraints.BOTH;
+	    pPanelConstraints.anchor = GridBagConstraints.WEST;
+	    main.getContentPane().add(scrollPane, pPanelConstraints);
 	    
 	    //Sets the window visible
 		main.setVisible(true);
@@ -411,17 +401,28 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 			}
 		}
 		
-		JPanel p;
+		JLabel previewLabel;
 		for(int i = 0; i < playlist.size(); i++){
-			JLabel label = new JLabel(playlist.get(i));
-			p = new JPanel();
-			p.add(label);
-			c.anchor = GridBagConstraints.FIRST_LINE_START;
-			c.gridx = 0;
-			c.gridy = i;
-			c.weightx = 1;
-			c.weighty = 1;
-			pPanel.add(p, c);
+			previewLabel = new JLabel(playlist.get(i));
+			previewLabel.setSize(playlist.get(i).getIconWidth(), playlist.get(i).getIconHeight());
+			picPanel = new JPanel();
+			picPanel.add(previewLabel);
+			picPanel.setName(playlist.get(i).toString());
+			picPanel.setBackground(new Color(60,60,60));
+			picPanel.setSize(previewLabel.getSize());
+			
+			previewConstraints.anchor = GridBagConstraints.FIRST_LINE_START;
+			previewConstraints.gridx = 0;
+			previewConstraints.gridy = i;
+			previewConstraints.weightx = 1;
+			previewConstraints.weighty = 1;
+			
+			//LayeredPane for adding things later on top of picPanel
+			picContainer = new JLayeredPane();
+			picContainer.setPreferredSize(new Dimension(picPanel.getSize()));
+			picContainer.add(picPanel, new Integer(0));
+			picContainer.addMouseListener(this);
+			pPanel.add(picContainer, previewConstraints);
 		}
 		
 		pPanel.invalidate();
@@ -546,6 +547,19 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 		playPanel.repaint();
 	}
 	
+	public void removeImage(String imageName){
+		for(int i = 0; i < icons.size(); i++){
+			if(icons.get(i).equals(imageName)){
+				icons.remove(i);
+			}
+		}
+		for(int i = 0; i < URLicons.size(); i++){
+			if(URLicons.get(i).toString().equals(imageName)){
+				URLicons.remove(i);
+			}
+		}
+	}
+	
 	public void addTimer(){
 		toolkit = Toolkit.getDefaultToolkit();
 		t = new Timer();
@@ -563,5 +577,135 @@ public class GUI extends JFrame implements ActionListener, ItemListener{
 				firstInterval = false;
 			}
 		}
+	}
+	class MyDragDropListener implements DropTargetListener {
+
+	    @Override
+	    public void drop(DropTargetDropEvent event) {
+
+	        // Accept copy drops
+	        event.acceptDrop(DnDConstants.ACTION_COPY);
+
+	        // Get the transfer which can provide the dropped item data
+	        Transferable transferable = event.getTransferable();
+
+	        // Get the data formats of the dropped item
+	        DataFlavor[] flavors = transferable.getTransferDataFlavors();
+
+	        // Loop through the flavors
+	        for (DataFlavor flavor : flavors) {
+
+	            try {
+
+	                // If the drop items are files
+	                if (flavor.isFlavorJavaFileListType()) {
+
+	                    // Get all of the dropped files
+	                    List files = (List) transferable.getTransferData(flavor);
+	                    ArrayList<String> arrayFiles = new ArrayList<String>();
+	                    for(int i = 0; i < files.size(); i++){
+	                    	arrayFiles.add(files.get(i).toString());
+	                    }
+
+	                    // Loop them through
+	                    for (String filePath : arrayFiles) {
+
+	                        // Print out the file path
+	                        System.out.println("File path is '" + filePath + "'.");
+	                        icons.add(filePath);
+	                        previewImages();
+	                    }
+	                }
+
+	            } catch (Exception e) {
+
+	                // Print out the error stack
+	                e.printStackTrace();
+
+	            }
+	        }
+
+	        // Inform that the drop is complete
+	        event.dropComplete(true);
+
+	    }
+
+	    @Override
+	    public void dragEnter(DropTargetDragEvent event) {
+	    }
+
+	    @Override
+	    public void dragExit(DropTargetEvent event) {
+	    }
+
+	    @Override
+	    public void dragOver(DropTargetDragEvent event) {
+	    }
+
+	    @Override
+	    public void dropActionChanged(DropTargetDragEvent event) {
+	    }
+
+	}
+	@Override
+	public void mouseClicked(MouseEvent arg0) {
+		if (arg0.getSource().equals(cWf)) {
+			// TODO Auto-generated method stub
+			if (isAutoplay) {
+				t.cancel();
+				previousImage();
+				addTimer();
+			} else {
+				nextImage();
+			}
+		}
+		JLayeredPane source = (JLayeredPane) arg0.getSource();
+		
+		if (source != null) {
+			int reply = JOptionPane.showConfirmDialog(null, "Do you want to delete this image?", "Delete image", JOptionPane.YES_NO_OPTION);
+			if (reply == JOptionPane.YES_OPTION) {
+				removeImage(source.getComponentAt(0,0).getName());
+				previewImages();
+			}
+		} else {
+			System.out.println("There is something wrong");
+		}
+		
+	}
+
+	@Override
+	public void mouseEntered(MouseEvent arg0) {
+		// TODO Auto-generated method stub
+		JLayeredPane source = (JLayeredPane) arg0.getSource();
+		
+		if (source != null) {
+			ImageIcon i = new ImageIcon(getClass().getResource("/images/icon50x50.png"));
+			JLabel l = new JLabel(i);
+			l.setBounds(0, 10, 50, 50);
+			source.add(l, new Integer(1));
+			
+		}
+	}
+
+	@Override
+	public void mouseExited(MouseEvent arg0) {
+		// TODO Auto-generated method stub
+		JLayeredPane source = (JLayeredPane) arg0.getSource();
+		
+		if (source != null) {
+			source.remove(source.getComponentAt(0, 10));
+		}
+	}
+
+	@Override
+	public void mousePressed(MouseEvent arg0) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public void mouseReleased(MouseEvent arg0) {
+		// TODO Auto-generated method stub
+		
 	}
 }
